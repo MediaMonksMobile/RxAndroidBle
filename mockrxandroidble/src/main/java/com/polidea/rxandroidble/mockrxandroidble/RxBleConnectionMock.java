@@ -373,6 +373,7 @@ public class RxBleConnectionMock implements RxBleConnection {
                 .flatMap(new Func1<Boolean, Observable<? extends byte[]>>() {
                     @Override
                     public Observable<? extends byte[]> call(Boolean ignored) {
+                        // There was a Observable.just() here, but it's not realistic that the data are returned in the same scheduler & task that requested them.
                         return Observable.fromCallable(new Callable<byte[]>() {
                             @Override
                             public byte[] call() throws Exception {
