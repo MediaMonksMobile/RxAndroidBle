@@ -373,7 +373,12 @@ public class RxBleConnectionMock implements RxBleConnection {
                 .flatMap(new Func1<Boolean, Observable<? extends byte[]>>() {
                     @Override
                     public Observable<? extends byte[]> call(Boolean ignored) {
-                        return Observable.just(data);
+                        return Observable.fromCallable(new Callable<byte[]>() {
+                            @Override
+                            public byte[] call() throws Exception {
+                                return data;
+                            }
+                        });
                     }
                 });
     }
