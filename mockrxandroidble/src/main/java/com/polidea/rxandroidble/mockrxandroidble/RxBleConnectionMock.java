@@ -378,7 +378,8 @@ public class RxBleConnectionMock implements RxBleConnection {
                             public byte[] call() throws Exception {
                                 return data;
                             }
-                        });
+                        })
+                                .delay(10, TimeUnit.MILLISECONDS);
                     }
                 });
     }
