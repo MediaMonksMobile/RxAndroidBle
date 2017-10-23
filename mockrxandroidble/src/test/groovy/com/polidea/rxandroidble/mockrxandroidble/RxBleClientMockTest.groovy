@@ -2,8 +2,11 @@ package com.polidea.rxandroidble.mockrxandroidble
 
 import android.os.Build
 import com.polidea.rxandroidble.RxBleConnection
+import com.polidea.rxandroidble.exceptions.BleGattException
+import com.polidea.rxandroidble.exceptions.BleGattOperationType
 import org.robolectric.annotation.Config
 import org.robospock.RoboSpecification
+import rx.Single
 import rx.observers.TestSubscriber
 import rx.subjects.PublishSubject
 
@@ -182,6 +185,43 @@ public class RxBleClientMockTest extends RoboSpecification {
         then:
         testSubscriber.assertValue("Polidea")
     }
+
+    def "should return dynamic characteristic data"() {
+        given:
+        def testSubscriber = TestSubscriber.create()
+
+        when:
+        rxBleClient.scanBleDevices(null)
+                .take(1)
+                .map { scanResult -> scanResult.getBleDevice() }
+                .flatMap { rxBleDevice -> rxBleDevice.establishConnection(false) }
+                .doOnNext { rxBleConnection -> ((RxBleConnectionMock)rxBleConnection).addCharacteristicReadFilter(characteristicUUID, { Single.just("dynamic!".getBytes()) }) }
+                .flatMap { rxBleConnection -> rxBleConnection.readCharacteristic(characteristicUUID) }
+                .map { data -> new String(data) }
+                .subscribe(testSubscriber)
+
+        then:
+        testSubscriber.assertValue("dynamic!")
+    }
+
+    def "should return write characteristic error"() {
+        given:
+        def testSubscriber = TestSubscriber.create()
+        def filter = { data -> Single.error(new BleGattException(0x83, BleGattOperationType.CHARACTERISTIC_WRITE)) }
+
+        when:
+        rxBleClient.scanBleDevices(null)
+                .take(1)
+                .map { scanResult -> scanResult.getBleDevice() }
+                .flatMap { rxBleDevice -> rxBleDevice.establishConnection(false) }
+                .doOnNext { rxBleConnection -> ((RxBleConnectionMock)rxBleConnection).addCharacteristicWriteFilter(characteristicUUID, filter) }
+                .flatMap { rxBleConnection -> rxBleConnection.writeCharacteristic(characteristicUUID, "whatever".getBytes()) }
+                .subscribe(testSubscriber)
+
+        then:
+        testSubscriber.assertError(BleGattException.class)
+    }
+
 
     def "should return descriptor data"() {
         given:

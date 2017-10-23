@@ -21,8 +21,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import rx.Completable;
 import rx.Observable;
+import rx.Single;
 import rx.functions.Action0;
 import rx.functions.Actions;
+import rx.functions.Func0;
 import rx.functions.Func1;
 
 import static rx.Observable.just;
@@ -51,6 +53,8 @@ public class RxBleConnectionMock implements RxBleConnection {
     private int rssi;
     private int currentMtu = 23;
     private Map<UUID, Observable<byte[]>> characteristicNotificationSources;
+    private Map<UUID, Func1<byte[], Single<byte[]>>> characteristicWriteFilters = new HashMap<>();
+    private Map<UUID, Func0<Single<byte[]>>> characteristicReadFilters = new HashMap<>();
 
 
     public RxBleConnectionMock(RxBleDeviceServices rxBleDeviceServices,
@@ -107,12 +111,17 @@ public class RxBleConnectionMock implements RxBleConnection {
 
     @Override
     public Observable<byte[]> readCharacteristic(@NonNull UUID characteristicUuid) {
-        return getCharacteristic(characteristicUuid).map(new Func1<BluetoothGattCharacteristic, byte[]>() {
-            @Override
-            public byte[] call(BluetoothGattCharacteristic bluetoothGattCharacteristic) {
-                return bluetoothGattCharacteristic.getValue();
-            }
-        });
+        Func0<Single<byte[]>> filter = characteristicReadFilters.get(characteristicUuid);
+        if (filter != null) {
+            return filter.call().toObservable();
+        } else {
+            return getCharacteristic(characteristicUuid).map(new Func1<BluetoothGattCharacteristic, byte[]>() {
+                @Override
+                public byte[] call(BluetoothGattCharacteristic bluetoothGattCharacteristic) {
+                    return bluetoothGattCharacteristic.getValue();
+                }
+            });
+        }
     }
 
     @Override
@@ -299,7 +308,7 @@ public class RxBleConnectionMock implements RxBleConnection {
                                 return rxBleDeviceServices.getCharacteristic(uuid);
                             }
                         }
-                );
+                                                                                  );
                 return this;
             }
 
@@ -362,7 +371,7 @@ public class RxBleConnectionMock implements RxBleConnection {
     }
 
     @Override
-    public Observable<byte[]> writeCharacteristic(@NonNull UUID characteristicUuid, @NonNull final byte[] data) {
+    public Observable<byte[]> writeCharacteristic(@NonNull final UUID characteristicUuid, @NonNull final byte[] data) {
         return getCharacteristic(characteristicUuid)
                 .map(new Func1<BluetoothGattCharacteristic, Boolean>() {
                     @Override
@@ -373,14 +382,19 @@ public class RxBleConnectionMock implements RxBleConnection {
                 .flatMap(new Func1<Boolean, Observable<? extends byte[]>>() {
                     @Override
                     public Observable<? extends byte[]> call(Boolean ignored) {
-                        // There was a Observable.just() here, but it's not realistic that the data are returned in the same scheduler & task that requested them.
-                        return Observable.fromCallable(new Callable<byte[]>() {
-                            @Override
-                            public byte[] call() throws Exception {
-                                return data;
-                            }
-                        })
-                                .delay(10, TimeUnit.MILLISECONDS);
+                        Func1<byte[], Single<byte[]>> filter = characteristicWriteFilters.get(characteristicUuid);
+                        if (filter != null) {
+                            return filter.call(data).toObservable();
+                        } else {
+                            // There was a Observable.just() here, but it's not realistic that the data are returned in the same scheduler & task that requested them.
+                            return Observable.fromCallable(new Callable<byte[]>() {
+                                @Override
+                                public byte[] call() throws Exception {
+                                    return data;
+                                }
+                            })
+                                             .delay(10, TimeUnit.MILLISECONDS);
+                        }
                     }
                 });
     }
@@ -416,7 +430,7 @@ public class RxBleConnectionMock implements RxBleConnection {
                 descriptor.setValue(data);
             }
         })
-                .andThen(Observable.just(data));
+                          .andThen(Observable.just(data));
     }
 
     private Observable<Observable<byte[]>> createCharacteristicNotificationObservable(final UUID characteristicUuid,
@@ -446,7 +460,7 @@ public class RxBleConnectionMock implements RxBleConnection {
                 .subscribe(
                         Actions.empty(),
                         Actions.<Throwable>toAction1(Actions.empty())
-                );
+                          );
     }
 
     @NonNull
@@ -479,7 +493,7 @@ public class RxBleConnectionMock implements RxBleConnection {
             final NotificationSetupMode setupMode,
             final boolean enabled,
             final boolean isIndication
-    ) {
+                                                               ) {
         if (setupMode == NotificationSetupMode.DEFAULT) {
             final byte[] enableValue = isIndication ? ENABLE_INDICATION_VALUE : ENABLE_NOTIFICATION_VALUE;
             return getClientConfigurationDescriptor(bluetoothGattCharacteristicUUID)
@@ -504,5 +518,13 @@ public class RxBleConnectionMock implements RxBleConnection {
     @Override
     public <T> Observable<T> queue(@NonNull RxBleCustomOperation<T> operation) {
         throw new UnsupportedOperationException("Mock does not support queuing custom operation.");
+    }
+
+    public void addCharacteristicWriteFilter(UUID uuid, Func1<byte[], Single<byte[]>> filter) {
+        characteristicWriteFilters.put(uuid, filter);
+    }
+
+    public void addCharacteristicReadFilter(UUID uuid, Func0<Single<byte[]>> filter) {
+        characteristicReadFilters.put(uuid, filter);
     }
 }
