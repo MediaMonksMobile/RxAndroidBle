@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+
 import com.polidea.rxandroidble.RxBleClient;
 import com.polidea.rxandroidble.RxBleDevice;
 import com.polidea.rxandroidble.RxBleDeviceServices;
@@ -12,6 +13,7 @@ import com.polidea.rxandroidble.RxBleScanResult;
 import com.polidea.rxandroidble.scan.ScanFilter;
 import com.polidea.rxandroidble.scan.ScanResult;
 import com.polidea.rxandroidble.scan.ScanSettings;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -19,7 +21,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+
 import rx.Observable;
+import rx.Single;
+import rx.functions.Func0;
 import rx.functions.Func1;
 import rx.subjects.ReplaySubject;
 
@@ -83,6 +88,8 @@ public class RxBleClientMock extends RxBleClient {
         private byte[] scanRecord;
         private RxBleDeviceServices rxBleDeviceServices;
         private Map<UUID, Observable<byte[]>> characteristicNotificationSources;
+        private Map<UUID, Func1<byte[], Single<byte[]>>> characteristicWriteFilters = new HashMap<>();
+        private Map<UUID, Func0<Single<byte[]>>> characteristicReadFilters = new HashMap<>();
 
         /**
          * Build a new {@link RxBleDevice}.
@@ -120,11 +127,13 @@ public class RxBleClientMock extends RxBleClient {
                     + " DeviceBuilder#deviceMacAddress should be called.");
             if (this.scanRecord == null) throw new IllegalStateException("ScanRecord required. DeviceBuilder#scanRecord should be called.");
             RxBleDeviceMock rxBleDeviceMock = new RxBleDeviceMock(deviceName,
-                    deviceMacAddress,
-                    scanRecord,
-                    rssi,
-                    rxBleDeviceServices,
-                    characteristicNotificationSources);
+                                                                  deviceMacAddress,
+                                                                  scanRecord,
+                                                                  rssi,
+                                                                  rxBleDeviceServices,
+                                                                  characteristicNotificationSources,
+                                                                  characteristicReadFilters,
+                                                                  characteristicWriteFilters);
 
             for (BluetoothGattService service : rxBleDeviceServices.getBluetoothGattServices()) {
                 rxBleDeviceMock.addAdvertisedUUID(service.getUuid());
@@ -173,6 +182,26 @@ public class RxBleClientMock extends RxBleClient {
          */
         public DeviceBuilder scanRecord(@NonNull byte[] scanRecord) {
             this.scanRecord = scanRecord;
+            return this;
+        }
+
+        /**
+         * Add a callback that intercepts all characteristic writes for the given characteristic UUID. This can be used to e.g. simulate delays or write errors. Calling this method is not required.
+         * @param uuid the UUID of the characteristic to add a filter to. This UUID should be already been registered with {@link CharacteristicsBuilder#addCharacteristic(UUID, byte[], List)}.
+         * @param filter the filter callback; it receives the array of bytes the application asked to write, and should return a {@link Single} emitting either the received data, or modified data (so that a subsequent read would retrieve that data instead), or an error (see {@link com.polidea.rxandroidble.RxBleConnection#writeCharacteristic(UUID, byte[])} for the expected exceptions).
+         */
+        public DeviceBuilder addCharacteristicWriteFilter(UUID uuid, Func1<byte[], Single<byte[]>> filter) {
+            characteristicWriteFilters.put(uuid, filter);
+            return this;
+        }
+
+        /**
+         * Add a callback that intercepts all characteristic read for the given characteristic UUID. This can be used to e.g. simulate complex device logic. Calling this method is not required.
+         * @param uuid the UUID of the characteristic to add a filter to. This UUID should be already been registered with {@link CharacteristicsBuilder#addCharacteristic(UUID, byte[], List)}.
+         * @param filter the filter callback; it emits the array of bytes the application will receive.
+         */
+        public DeviceBuilder addCharacteristicReadFilter(UUID uuid, Func0<Single<byte[]>> filter) {
+            characteristicReadFilters.put(uuid, filter);
             return this;
         }
     }

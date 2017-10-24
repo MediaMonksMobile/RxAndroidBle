@@ -53,16 +53,20 @@ public class RxBleConnectionMock implements RxBleConnection {
     private int rssi;
     private int currentMtu = 23;
     private Map<UUID, Observable<byte[]>> characteristicNotificationSources;
-    private Map<UUID, Func1<byte[], Single<byte[]>>> characteristicWriteFilters = new HashMap<>();
-    private Map<UUID, Func0<Single<byte[]>>> characteristicReadFilters = new HashMap<>();
+    private final Map<UUID, Func1<byte[], Single<byte[]>>> characteristicWriteFilters;
+    private final Map<UUID, Func0<Single<byte[]>>> characteristicReadFilters;
 
 
     public RxBleConnectionMock(RxBleDeviceServices rxBleDeviceServices,
                                int rssi,
-                               Map<UUID, Observable<byte[]>> characteristicNotificationSources) {
+                               Map<UUID, Observable<byte[]>> characteristicNotificationSources,
+                               Map<UUID, Func0<Single<byte[]>>> characteristicReadFilters,
+                               Map<UUID, Func1<byte[], Single<byte[]>>> characteristicWriteFilters) {
         this.rxBleDeviceServices = rxBleDeviceServices;
         this.rssi = rssi;
         this.characteristicNotificationSources = characteristicNotificationSources;
+        this.characteristicReadFilters = characteristicReadFilters;
+        this.characteristicWriteFilters = characteristicWriteFilters;
     }
 
     @Override
@@ -518,13 +522,5 @@ public class RxBleConnectionMock implements RxBleConnection {
     @Override
     public <T> Observable<T> queue(@NonNull RxBleCustomOperation<T> operation) {
         throw new UnsupportedOperationException("Mock does not support queuing custom operation.");
-    }
-
-    public void addCharacteristicWriteFilter(UUID uuid, Func1<byte[], Single<byte[]>> filter) {
-        characteristicWriteFilters.put(uuid, filter);
-    }
-
-    public void addCharacteristicReadFilter(UUID uuid, Func0<Single<byte[]>> filter) {
-        characteristicReadFilters.put(uuid, filter);
     }
 }

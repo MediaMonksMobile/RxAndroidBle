@@ -15,9 +15,11 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import rx.Observable;
+import rx.Single;
 import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func0;
+import rx.functions.Func1;
 import rx.subjects.BehaviorSubject;
 
 import static com.polidea.rxandroidble.RxBleConnection.RxBleConnectionState.CONNECTED;
@@ -42,12 +44,16 @@ public class RxBleDeviceMock implements RxBleDevice {
                            byte[] scanRecord,
                            Integer rssi,
                            RxBleDeviceServices rxBleDeviceServices,
-                           Map<UUID, Observable<byte[]>> characteristicNotificationSources) {
+                           Map<UUID, Observable<byte[]>> characteristicNotificationSources,
+                           Map<UUID, Func0<Single<byte[]>>> characteristicReadFilters,
+                           Map<UUID, Func1<byte[], Single<byte[]>>> characteristicWriteFilters) {
         this.name = name;
         this.macAddress = macAddress;
         this.rxBleConnection = new RxBleConnectionMock(rxBleDeviceServices,
-                rssi,
-                characteristicNotificationSources);
+                                                       rssi,
+                                                       characteristicNotificationSources,
+                                                       characteristicReadFilters,
+                                                       characteristicWriteFilters);
         this.rssi = rssi;
         this.scanRecord = scanRecord;
         this.advertisedUUIDs = new ArrayList<>();

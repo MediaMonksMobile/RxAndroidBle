@@ -17,6 +17,7 @@ public class RxBleClientMockTest extends RoboSpecification {
     def characteristicUUID = UUID.fromString("00002a29-0000-1000-8000-00805f9b34fb")
     def characteristicNotifiedUUID = UUID.fromString("00002a29-0000-1000-8000-00805f9b34fb")
     def characteristicData = "Polidea".getBytes()
+    def filteredCharacteristicUUID = UUID.fromString("00002a2a-0000-1000-8000-00805f9b34fb")
     def descriptorUUID = UUID.fromString("00001337-0000-1000-8000-00805f9b34fb");
     def descriptorData = "Config".getBytes();
     def rxBleClient
@@ -30,16 +31,27 @@ public class RxBleClientMockTest extends RoboSpecification {
                 .rssi(rssi)
                 .notificationSource(characteristicNotifiedUUID, characteristicNotificationSubject)
                 .addService(
-                serviceUUID,
-                new RxBleClientMock.CharacteristicsBuilder()
-                        .addCharacteristic(
-                        characteristicUUID,
-                        characteristicData,
-                        new RxBleClientMock.DescriptorsBuilder()
-                                .addDescriptor(descriptorUUID, descriptorData)
-                                .build()
-                ).build()
-        ).build()
+                    serviceUUID,
+                    new RxBleClientMock.CharacteristicsBuilder()
+                            .addCharacteristic(
+                                characteristicUUID,
+                                characteristicData,
+                                new RxBleClientMock.DescriptorsBuilder()
+                                        .addDescriptor(descriptorUUID, descriptorData)
+                                        .build()
+                            )
+                            .addCharacteristic(
+                                filteredCharacteristicUUID,
+                                characteristicData,
+                                new RxBleClientMock.DescriptorsBuilder()
+                                        .addDescriptor(descriptorUUID, descriptorData)
+                                        .build()
+                            )
+                            .build()
+                )
+                .addCharacteristicReadFilter(filteredCharacteristicUUID, { Single.just("dynamic!".getBytes()) })
+                .addCharacteristicWriteFilter(filteredCharacteristicUUID, { data -> Single.error(new BleGattException(0x83, BleGattOperationType.CHARACTERISTIC_WRITE)) })
+                .build()
     }
 
     def setup() {
@@ -195,8 +207,7 @@ public class RxBleClientMockTest extends RoboSpecification {
                 .take(1)
                 .map { scanResult -> scanResult.getBleDevice() }
                 .flatMap { rxBleDevice -> rxBleDevice.establishConnection(false) }
-                .doOnNext { rxBleConnection -> ((RxBleConnectionMock)rxBleConnection).addCharacteristicReadFilter(characteristicUUID, { Single.just("dynamic!".getBytes()) }) }
-                .flatMap { rxBleConnection -> rxBleConnection.readCharacteristic(characteristicUUID) }
+                .flatMap { rxBleConnection -> rxBleConnection.readCharacteristic(filteredCharacteristicUUID) }
                 .map { data -> new String(data) }
                 .subscribe(testSubscriber)
 
@@ -207,15 +218,13 @@ public class RxBleClientMockTest extends RoboSpecification {
     def "should return write characteristic error"() {
         given:
         def testSubscriber = TestSubscriber.create()
-        def filter = { data -> Single.error(new BleGattException(0x83, BleGattOperationType.CHARACTERISTIC_WRITE)) }
 
         when:
         rxBleClient.scanBleDevices(null)
                 .take(1)
                 .map { scanResult -> scanResult.getBleDevice() }
                 .flatMap { rxBleDevice -> rxBleDevice.establishConnection(false) }
-                .doOnNext { rxBleConnection -> ((RxBleConnectionMock)rxBleConnection).addCharacteristicWriteFilter(characteristicUUID, filter) }
-                .flatMap { rxBleConnection -> rxBleConnection.writeCharacteristic(characteristicUUID, "whatever".getBytes()) }
+                .flatMap { rxBleConnection -> rxBleConnection.writeCharacteristic(filteredCharacteristicUUID, "whatever".getBytes()) }
                 .subscribe(testSubscriber)
 
         then:
