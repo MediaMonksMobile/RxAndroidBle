@@ -390,14 +390,7 @@ public class RxBleConnectionMock implements RxBleConnection {
                         if (filter != null) {
                             return filter.call(data).toObservable();
                         } else {
-                            // There was a Observable.just() here, but it's not realistic that the data are returned in the same scheduler & task that requested them.
-                            return Observable.fromCallable(new Callable<byte[]>() {
-                                @Override
-                                public byte[] call() throws Exception {
-                                    return data;
-                                }
-                            })
-                                             .delay(10, TimeUnit.MILLISECONDS);
+                            return Observable.just(data);
                         }
                     }
                 });
