@@ -126,7 +126,7 @@ From <a href="https://developer.android.com/reference/android/bluetooth/Bluetoot
 
 Auto connect concept may be misleading at first glance. With the autoconnect flag set to false the connection will end up with an error if a BLE device is not advertising when the `RxBleDevice#establishConnection` method is called. From platform to platform timeout after which the error is emitted differs, but in general it is rather tens of seconds than single seconds (~30 s).
 
-Setting the auto connect flag to true allows you to wait until the BLE device becomes discoverable. The `RxBleConnection` instance won't be emitted until the connection is fully set up. From experience it also handles acquiring wake locks, so it's safe to assume that your Android device will be woken up after the connection has been established - but it is not a documented feature and may change in the future system releases.
+Setting the auto connect flag to true allows you to wait until the BLE device becomes discoverable. The `RxBleConnection` instance won't be emitted until the connection is fully set up. From experience it also handles acquiring wake locks, so it's safe to assume that your Android device will be woken up after the connection has been established - but it is not a documented feature and may change in the future system releases. Unlike the native Android API, if `autoConnect=true` while using this library there will be NO attempts to automatically reconnect if the original connection is lost.
 
 Be careful not to overuse the autoConnect flag. On the other side it has negative impact on the connection initialization speed. Scanning window and interval is lowered as it is optimized for background use and depending on Bluetooth parameters it may (and usually do) take more time to establish the connection.
 
@@ -272,26 +272,26 @@ There are three types of `Observable`s that you may encounter.
 
 The below table contains an overview of used `Observable` patterns
 
-| Interface | Function | Number of values | Completes |
-| --- | --- | --- | --- |
-| RxBleClient | scanBleDevices()* | Infinite | false |
-| RxBleClient | observeStateChanges() | Infinite** | false** |
-| RxBleDevice | observeConnectionStateChanges() | Infinite | false |
-| RxBleDevice | establishConnection()* | Single | false |
-| RxBleConnection | discoverServices() | Single | true |
-| RxBleConnection | setupNotification()* | Single | false |
-| RxBleConnection | setupNotification() emitted Observable | Infinite | false |
-| RxBleConnection | setupIndication()* | Single | false |
-| RxBleConnection | setupIndication() emitted Observable | Infinite | false |
-| RxBleConnection | getCharacteristic() | Single | true |
-| RxBleConnection | readCharacteristic() | Single | true |
-| RxBleConnection | writeCharacteristic() | Single | true |
-| RxBleConnection | readDescriptor() | Single | true |
-| RxBleConnection | writeDescriptor() | Single | true |
-| RxBleConnection | readRssi() | Single | true |
-| RxBleConnection | requestMtu() | Single | true |
-| RxBleConnection | queue() | User defined | User defined |
-| LongWriteOperationBuilder | build() | Single | true |
+| Interface | Function | Number of values | Completes | [Hot/Cold](https://medium.com/@benlesh/hot-vs-cold-observables-f8094ed53339)
+| --- | --- | --- | --- | --- |
+| RxBleClient | scanBleDevices()* | Infinite | false | cold |
+| RxBleClient | observeStateChanges() | Infinite** | false** | hot |
+| RxBleDevice | observeConnectionStateChanges() | Infinite | false | hot |
+| RxBleDevice | establishConnection()* | Single | false | cold |
+| RxBleConnection | discoverServices() | Single | true | cold |
+| RxBleConnection | setupNotification()* | Single | false | cold |
+| RxBleConnection | setupNotification() emitted Observable | Infinite | false | hot |
+| RxBleConnection | setupIndication()* | Single | false | cold |
+| RxBleConnection | setupIndication() emitted Observable | Infinite | false | hot |
+| RxBleConnection | getCharacteristic() | Single | true | cold |
+| RxBleConnection | readCharacteristic() | Single | true | cold |
+| RxBleConnection | writeCharacteristic() | Single | true | cold |
+| RxBleConnection | readDescriptor() | Single | true | cold |
+| RxBleConnection | writeDescriptor() | Single | true | cold |
+| RxBleConnection | readRssi() | Single | true | cold |
+| RxBleConnection | requestMtu() | Single | true | cold |
+| RxBleConnection | queue() | User defined | User defined | cold |
+| LongWriteOperationBuilder | build() | Single | true | cold |
 
 \* this `Observable` when unsubscribed closes/cleans up internal resources (i.e. finishes scan, closes a connection, disables notifications)<br>
 \** this `Observable` does emit only a single value and finishes in exactly one situation — when Bluetooth Adapter is not available on the device. There is no reason to monitor other states as the adapter does not appear during runtime.
@@ -322,7 +322,7 @@ Complete usage examples are located in `/sample` [GitHub repo](https://github.co
 ### Gradle
 
 ```groovy
-compile "com.polidea.rxandroidble:rxandroidble:1.4.1"
+compile "com.polidea.rxandroidble:rxandroidble:1.4.3"
 ```
 ### Maven
 
@@ -330,7 +330,7 @@ compile "com.polidea.rxandroidble:rxandroidble:1.4.1"
 <dependency>
   <groupId>com.polidea.rxandroidble</groupId>
   <artifactId>rxandroidble</artifactId>
-  <version>1.4.1</version>
+  <version>1.4.3</version>
   <type>aar</type>
 </dependency>
 ```
@@ -344,10 +344,18 @@ To be able to download it you need to add Sonatype Snapshot repository site to y
 maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
 ```
 
-## Unit testing
-Using RxAndroidBle enables you to unit test your application easily. For examples how to use mocking head to [MockRxAndroidBle](https://github.com/Polidea/RxAndroidBle/tree/master/mockrxandroidble).
+## Testing
+Using RxAndroidBle enables you to test your application easily.
 
-Note: Using MockRxAndroidBle in unit tests needs [Robolectric](https://github.com/robolectric/robolectric).
+### Unit tests
+Most of the objects that the library uses are implementations of interfaces which can be mocked.
+
+Alternatively one could use `MockRxAndroidBle` (more info below). Note: Using `MockRxAndroidBle` in unit tests needs [Robolectric](https://github.com/robolectric/robolectric).
+
+### Integration tests
+Sometimes there is a need to develop the application without the access to a physical device. We have created [MockRxAndroidBle](https://github.com/Polidea/RxAndroidBle/tree/master/mockrxandroidble) as a drop-in addon for mocking a simple peripheral.
+
+Unfortunately it is not under active development—PRs are welcomed though. ;)
 
 ## [Small performance comparison](https://github.com/Polidea/RxAndroidBle/issues/41#issuecomment-333513707)
 
@@ -359,6 +367,9 @@ When submitting code, please make every effort to follow existing conventions an
 ## Support
 * non-commercial — head to [StackOverflow #rxandroidble](https://stackoverflow.com/questions/tagged/rxandroidble)
 * commercial — drop an email to hello@polidea.com for more info
+
+## Discussions
+Want to talk about it? Join our discussion on [Gitter](https://gitter.im/RxBLELibraries/RxAndroidBle)
 
 ## Maintainers
 * Dariusz Seweryn (dariusz.seweryn@polidea.com)

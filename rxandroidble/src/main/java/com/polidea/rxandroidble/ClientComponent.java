@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothManager;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
@@ -24,18 +25,23 @@ import com.polidea.rxandroidble.internal.scan.ScanSetupBuilderImplApi21;
 import com.polidea.rxandroidble.internal.scan.ScanSetupBuilderImplApi23;
 import com.polidea.rxandroidble.internal.serialization.ClientOperationQueue;
 import com.polidea.rxandroidble.internal.serialization.ClientOperationQueueImpl;
+import com.polidea.rxandroidble.internal.util.LocationServicesOkObservableApi23;
+import com.polidea.rxandroidble.internal.util.LocationServicesStatus;
+import com.polidea.rxandroidble.internal.util.LocationServicesStatusApi18;
+import com.polidea.rxandroidble.internal.util.LocationServicesStatusApi23;
+import com.polidea.rxandroidble.internal.util.ObservableUtil;
 import com.polidea.rxandroidble.scan.ScanResult;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import javax.inject.Named;
-import javax.inject.Provider;
+import bleshadow.javax.inject.Named;
+import bleshadow.javax.inject.Provider;
 
-import dagger.Binds;
-import dagger.Component;
-import dagger.Module;
-import dagger.Provides;
+import bleshadow.dagger.Binds;
+import bleshadow.dagger.Component;
+import bleshadow.dagger.Module;
+import bleshadow.dagger.Provides;
 import rx.Observable;
 import rx.Scheduler;
 import rx.functions.Func1;
@@ -129,6 +135,33 @@ public interface ClientComponent {
         @Named(PlatformConstants.INT_DEVICE_SDK)
         static int provideDeviceSdk() {
             return Build.VERSION.SDK_INT;
+        }
+
+        @Provides
+        ContentResolver provideContentResolver() {
+            return context.getContentResolver();
+        }
+
+        @Provides
+        LocationServicesStatus provideLocationServicesStatus(
+                @Named(PlatformConstants.INT_DEVICE_SDK) int deviceSdk,
+                Provider<LocationServicesStatusApi18> locationServicesStatusApi18Provider,
+                Provider<LocationServicesStatusApi23> locationServicesStatusApi23Provider
+        ) {
+            return deviceSdk < Build.VERSION_CODES.M
+                    ? locationServicesStatusApi18Provider.get()
+                    : locationServicesStatusApi23Provider.get();
+        }
+
+        @Provides
+        @Named(NamedBooleanObservables.LOCATION_SERVICES_OK)
+        Observable<Boolean> provideLocationServicesOkObservable(
+                @Named(PlatformConstants.INT_DEVICE_SDK) int deviceSdk,
+                Provider<LocationServicesOkObservableApi23> locationServicesOkObservableApi23Provider
+        ) {
+            return deviceSdk < Build.VERSION_CODES.M
+                    ? ObservableUtil.justOnNext(true) // there is no need for one before Marshmallow
+                    : locationServicesOkObservableApi23Provider.get();
         }
 
         @Provides
@@ -258,10 +291,6 @@ public interface ClientComponent {
 
         @Binds
         abstract Observable<RxBleAdapterStateObservable.BleAdapterState> bindStateObs(RxBleAdapterStateObservable stateObservable);
-
-        @Binds
-        @Named(NamedBooleanObservables.LOCATION_SERVICES_OK)
-        abstract Observable<Boolean> bindLocationServicesOkObs(LocationServicesOkObservable locationServicesOkObservable);
 
         @Binds
         @ClientScope

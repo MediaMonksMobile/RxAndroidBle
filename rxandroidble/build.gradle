@@ -4,7 +4,6 @@ apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
 
 android {
     compileSdkVersion 25
-    buildToolsVersion rootProject.ext.buildToolsVersionVariable
 
     defaultConfig {
         minSdkVersion 18
@@ -43,17 +42,21 @@ android {
     preBuild.dependsOn 'checkstyle'
 }
 
+androidGroovy {
+    skipJavaC = true
+}
+
 dependencies {
-    compile rootProject.ext.libs.rxjava
-    compile rootProject.ext.libs.rxrelay
-    compile rootProject.ext.libs.support_annotations
-    compile rootProject.ext.libs.dagger
-    annotationProcessor rootProject.ext.libs.dagger_compiler
+    api rootProject.ext.libs.rxjava
+    api rootProject.ext.libs.support_annotations
+    implementation rootProject.ext.libs.rxrelay
+    implementation project(path: ':dagger-library-shadow', transitive: false, configuration: 'shadow')
+    annotationProcessor project(path: ':dagger-compiler-shadow', transitive: false, configuration: 'shadow')
 
     // Test dependencies
-    testCompile rootProject.ext.libs.junit
-    testCompile rootProject.ext.libs.groovy
-    testCompile rootProject.ext.libs.spock
-    testCompile rootProject.ext.libs.robospock
-    testCompile rootProject.ext.libs.support
+    testCompileOnly rootProject.ext.libs.junit
+    testCompileOnly rootProject.ext.libs.groovy
+    testCompileOnly rootProject.ext.libs.spock
+    testCompileOnly rootProject.ext.libs.robospock
+    testCompileOnly rootProject.ext.libs.support
 }

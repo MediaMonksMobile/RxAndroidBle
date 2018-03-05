@@ -8,15 +8,16 @@ import android.support.annotation.RequiresApi;
 
 import com.polidea.rxandroidble.ClientComponent;
 import com.polidea.rxandroidble.RxBleConnection;
-import com.polidea.rxandroidble.internal.DeviceModule;
+import com.polidea.rxandroidble.internal.connection.ConnectionModule;
 import com.polidea.rxandroidble.internal.connection.PayloadSizeLimitProvider;
 import com.polidea.rxandroidble.internal.connection.RxBleGattCallback;
+import com.polidea.rxandroidble.internal.util.RxBleServicesLogger;
 
 import java.util.concurrent.TimeUnit;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Provider;
+import bleshadow.javax.inject.Inject;
+import bleshadow.javax.inject.Named;
+import bleshadow.javax.inject.Provider;
 
 import rx.Scheduler;
 
@@ -24,6 +25,7 @@ public class OperationsProviderImpl implements OperationsProvider {
 
     private final RxBleGattCallback rxBleGattCallback;
     private final BluetoothGatt bluetoothGatt;
+    private final RxBleServicesLogger bleServicesLogger;
     private final TimeoutConfiguration timeoutConfiguration;
     private final Scheduler bluetoothInteractionScheduler;
     private final Scheduler timeoutScheduler;
@@ -33,12 +35,14 @@ public class OperationsProviderImpl implements OperationsProvider {
     OperationsProviderImpl(
             RxBleGattCallback rxBleGattCallback,
             BluetoothGatt bluetoothGatt,
-            @Named(DeviceModule.OPERATION_TIMEOUT) TimeoutConfiguration timeoutConfiguration,
+            RxBleServicesLogger bleServicesLogger,
+            @Named(ConnectionModule.OPERATION_TIMEOUT) TimeoutConfiguration timeoutConfiguration,
             @Named(ClientComponent.NamedSchedulers.BLUETOOTH_INTERACTION) Scheduler bluetoothInteractionScheduler,
             @Named(ClientComponent.NamedSchedulers.TIMEOUT) Scheduler timeoutScheduler,
             Provider<ReadRssiOperation> rssiReadOperationProvider) {
         this.rxBleGattCallback = rxBleGattCallback;
         this.bluetoothGatt = bluetoothGatt;
+        this.bleServicesLogger = bleServicesLogger;
         this.timeoutConfiguration = timeoutConfiguration;
         this.bluetoothInteractionScheduler = bluetoothInteractionScheduler;
         this.timeoutScheduler = timeoutScheduler;
@@ -85,7 +89,7 @@ public class OperationsProviderImpl implements OperationsProvider {
 
     @Override
     public ServiceDiscoveryOperation provideServiceDiscoveryOperation(long timeout, TimeUnit timeUnit) {
-        return new ServiceDiscoveryOperation(rxBleGattCallback, bluetoothGatt,
+        return new ServiceDiscoveryOperation(rxBleGattCallback, bluetoothGatt, bleServicesLogger,
                 new TimeoutConfiguration(timeout, timeUnit, timeoutScheduler));
     }
 

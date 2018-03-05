@@ -13,10 +13,10 @@ import com.polidea.rxandroidble.internal.util.RxBleAdapterWrapper;
 
 import java.util.concurrent.TimeUnit;
 
-import javax.inject.Named;
+import bleshadow.javax.inject.Named;
 
-import dagger.Module;
-import dagger.Provides;
+import bleshadow.dagger.Module;
+import bleshadow.dagger.Provides;
 import rx.Scheduler;
 
 @Module(subcomponents = ConnectionComponent.class)
@@ -45,12 +45,6 @@ public class DeviceModule {
     @Named(MAC_ADDRESS)
     String provideMacAddress() {
         return macAddress;
-    }
-
-    @Provides
-    @Named(OPERATION_TIMEOUT)
-    static TimeoutConfiguration providesOperationTimeoutConf(@Named(NamedSchedulers.TIMEOUT) Scheduler timeoutScheduler) {
-        return new TimeoutConfiguration(DEFAULT_OPERATION_TIMEOUT, TimeUnit.SECONDS, timeoutScheduler);
     }
 
     @Provides

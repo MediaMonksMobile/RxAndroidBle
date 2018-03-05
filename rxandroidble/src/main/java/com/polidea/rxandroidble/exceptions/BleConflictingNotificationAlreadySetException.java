@@ -2,6 +2,13 @@ package com.polidea.rxandroidble.exceptions;
 
 import java.util.UUID;
 
+/**
+ * An exception being emitted from {@link com.polidea.rxandroidble.RxBleConnection#setupNotification(UUID)}/
+ * {@link com.polidea.rxandroidble.RxBleConnection#setupIndication(UUID)} or overloads in case when an opposite
+ * type (indication/notification) was already set.
+ *
+ * To make it possible to set this type of notification/indication the previous one must be unsubscribed.
+ */
 public class BleConflictingNotificationAlreadySetException extends BleException {
 
     private final UUID characteristicUuid;
@@ -9,6 +16,8 @@ public class BleConflictingNotificationAlreadySetException extends BleException 
     private final boolean alreadySetIsIndication;
 
     public BleConflictingNotificationAlreadySetException(UUID characteristicUuid, boolean alreadySetIsIndication) {
+        super("Characteristic " + characteristicUuid
+                + " notification already set to " + (alreadySetIsIndication ? "indication" : "notification"));
         this.characteristicUuid = characteristicUuid;
         this.alreadySetIsIndication = alreadySetIsIndication;
     }
@@ -25,11 +34,4 @@ public class BleConflictingNotificationAlreadySetException extends BleException 
         return !alreadySetIsIndication;
     }
 
-    @Override
-    public String toString() {
-        return "BleCharacteristicNotificationOfOtherTypeAlreadySetException{"
-                + "characteristicUuid=" + characteristicUuid.toString()
-                + ", typeAlreadySet=" + (alreadySetIsIndication ? "indication" : "notification")
-                + '}';
-    }
 }
