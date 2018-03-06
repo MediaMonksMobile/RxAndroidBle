@@ -2,27 +2,35 @@ package com.polidea.rxandroidble.internal.connection;
 
 import android.bluetooth.BluetoothGatt;
 
+import com.polidea.rxandroidble.ClientComponent;
 import com.polidea.rxandroidble.RxBleConnection;
 import com.polidea.rxandroidble.internal.ConnectionSetup;
 import com.polidea.rxandroidble.internal.serialization.ClientOperationQueue;
 
+import java.util.Set;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 
+import javax.inject.Named;
 import rx.Observable;
+import rx.Scheduler;
+import rx.functions.Action0;
 import rx.functions.Func0;
 
 public class ConnectorImpl implements Connector {
 
     private final ClientOperationQueue clientOperationQueue;
     private final ConnectionComponent.Builder connectionComponentBuilder;
+    private final Scheduler callbacksScheduler;
 
     @Inject
     public ConnectorImpl(
             ClientOperationQueue clientOperationQueue,
-            ConnectionComponent.Builder connectionComponentBuilder) {
+            ConnectionComponent.Builder connectionComponentBuilder,
+            @Named(ClientComponent.NamedSchedulers.BLUETOOTH_CALLBACKS) Scheduler callbacksScheduler) {
         this.clientOperationQueue = clientOperationQueue;
         this.connectionComponentBuilder = connectionComponentBuilder;
+        this.callbacksScheduler = callbacksScheduler;
     }
 
     @Override
@@ -45,12 +53,30 @@ public class ConnectorImpl implements Connector {
                 });
                 final Observable<BluetoothGatt> connectedObservable = clientOperationQueue.queue(connectionComponent.connectOperation());
                 final Observable<RxBleConnection> disconnectedErrorObservable = connectionComponent.gattCallback().observeDisconnect();
-                final DisconnectAction disconnect = connectionComponent.disconnectAction();
+                final Set<ConnectionSubscriptionWatcher> connSubWatchers = connectionComponent.connectionSubscriptionWatchers();
 
-                return newConnectionObservable
-                        .delaySubscription(connectedObservable)
-                        .mergeWith(disconnectedErrorObservable)
-                        .doOnUnsubscribe(disconnect);
+                return Observable.merge(
+                        newConnectionObservable.delaySubscription(connectedObservable),
+                        disconnectedErrorObservable
+                )
+                        .doOnSubscribe(new Action0() {
+                            @Override
+                            public void call() {
+                                for (ConnectionSubscriptionWatcher csa : connSubWatchers) {
+                                    csa.onConnectionSubscribed();
+                                }
+                            }
+                        })
+                        .doOnUnsubscribe(new Action0() {
+                            @Override
+                            public void call() {
+                                for (ConnectionSubscriptionWatcher csa : connSubWatchers) {
+                                    csa.onConnectionUnsubscribed();
+                                }
+                            }
+                        })
+                        .subscribeOn(callbacksScheduler)
+                        .unsubscribeOn(callbacksScheduler);
             }
         });
     }
