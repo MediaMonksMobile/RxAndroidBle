@@ -31,7 +31,7 @@ public class LocationServicesStatus {
     }
 
     public boolean isLocationPermissionOk() {
-        return !isLocationPermissionGrantedRequired() || checkerLocationPermission.isLocationPermissionGranted();
+        return checkerLocationPermission.areScanPermissionsOk();
     }
 
     public boolean isLocationProviderOk() {

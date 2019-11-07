@@ -1,9 +1,11 @@
 package com.polidea.rxandroidble;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothManager;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
@@ -71,6 +73,7 @@ public interface ClientComponent {
         public static final String INT_TARGET_SDK = "target-sdk";
         public static final String INT_DEVICE_SDK = "device-sdk";
         public static final String BOOL_IS_ANDROID_WEAR = "android-wear";
+        public static final String STRING_ARRAY_SCAN_PERMISSIONS = "scan-permissions";
         private PlatformConstants() {
 
         }
@@ -130,6 +133,55 @@ public interface ClientComponent {
         static int provideDeviceSdk() {
             return Build.VERSION.SDK_INT;
         }
+
+        @Provides
+        @Named(PlatformConstants.STRING_ARRAY_SCAN_PERMISSIONS)
+        static String[] provideRecommendedScanRuntimePermissionNames(
+                @Named(PlatformConstants.INT_DEVICE_SDK) int deviceSdk,
+                @Named(PlatformConstants.INT_TARGET_SDK) int targetSdk
+        ) {
+            int sdkVersion = Math.min(deviceSdk, targetSdk);
+            if (sdkVersion < 23 /* pre Android M */) {
+                // Before API 23 (Android M) no runtime permissions are needed
+                return new String[]{};
+            }
+            if (sdkVersion < 29 /* pre Android 10 */) {
+                // Since API 23 (Android M) ACCESS_COARSE_LOCATION or ACCESS_FINE_LOCATION allows for getting scan results
+                return new String[]{
+                        Manifest.permission.ACCESS_COARSE_LOCATION,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                };
+            }
+            // Since API 29 (Android 10) only ACCESS_FINE_LOCATION allows for getting scan results
+            return new String[]{Manifest.permission.ACCESS_FINE_LOCATION};
+        }
+
+        @Provides
+        static ContentResolver provideContentResolver(Context context) {
+            return context.getContentResolver();
+        }
+
+//        @Provides
+//        static LocationServicesStatus provideLocationServicesStatus(
+//                @Named(PlatformConstants.INT_DEVICE_SDK) int deviceSdk,
+//                Provider<LocationServicesStatusApi18> locationServicesStatusApi18Provider,
+//                Provider<LocationServicesStatusApi23> locationServicesStatusApi23Provider
+//        ) {
+//            return deviceSdk < Build.VERSION_CODES.M
+//                    ? locationServicesStatusApi18Provider.get()
+//                    : locationServicesStatusApi23Provider.get();
+//        }
+//
+//        @Provides
+//        @Named(NamedBooleanObservables.LOCATION_SERVICES_OK)
+//        static Observable<Boolean> provideLocationServicesOkObservable(
+//                @Named(PlatformConstants.INT_DEVICE_SDK) int deviceSdk,
+//                LocationServicesOkObservableApi23Factory locationServicesOkObservableApi23Factory
+//        ) {
+//            return deviceSdk < Build.VERSION_CODES.M
+//                    ? ObservableUtil.justOnNext(true) // there is no need for one before Marshmallow
+//                    : locationServicesOkObservableApi23Factory.get();
+//        }
 
         @Provides
         @Named(NamedExecutors.CONNECTION_QUEUE)

@@ -1,6 +1,91 @@
 Change Log
 ==========
-Version 1.4.3
+Version 1.10.4-SNAPSHOT
+* Fixed location permission check for Android 10 (https://github.com/Polidea/RxAndroidBle/pull/640)
+
+Version 1.10.3
+* Fixed `RxBleConnection.observeConnectionParametersUpdates()` not working in obfuscated apps. Added consumer `proguard-rules.pro` Proguard config file. (https://github.com/Polidea/RxAndroidBle/pull/634) 
+* Fixed log statement on reading RSSI of connection (https://github.com/Polidea/RxAndroidBle/pull/631)
+* Fixed log statement on setting `CONNECTION_PRIORITY_HIGH` (https://github.com/Polidea/RxAndroidBle/pull/623)
+
+Version 1.10.2
+* Fixed possible `UndeliverableException` when scan subscription is quickly disposed (https://github.com/Polidea/RxAndroidBle/pull/609)
+* Minor allocation decrease in `ScanSetupBuilderImplApi21` (https://github.com/Polidea/RxAndroidBle/pull/613)
+
+Version 1.10.1
+* Fixed `IllegalStateException` in `RxBleAdapterStateObservable` (https://github.com/Polidea/RxAndroidBle/pull/596)
+
+Version 1.10.0
+* Added possibility to disable logs of scanned peripherals via `LogOptions.Builder.setShouldLogScannedPeripherals()` (https://github.com/Polidea/RxAndroidBle/pull/579)
+* Added `RxBleConnection.observeConnectionParametersUpdates()` function (https://github.com/Polidea/RxAndroidBle/pull/565)
+* Minor allocation decrease in `LocationServicesOkObservable` (https://github.com/Polidea/RxAndroidBle/pull/574)
+* Fixed leaking `RxBleAdapterStateObservable` (https://github.com/Polidea/RxAndroidBle/pull/575)
+
+Version 1.9.2
+* Fixed `IllegalArgumentException` in `LocationServicesOkObservableApi23Factory` (https://github.com/Polidea/RxAndroidBle/pull/573)
+
+Version 1.9.1
+* Fixed `RxBleClient.observeStateChanges()` emissions (https://github.com/Polidea/RxAndroidBle/pull/556)
+* Fixed `RxBleDevice.establishConnection(boolean, Timeout)` Javadoc (https://github.com/Polidea/RxAndroidBle/pull/558)
+
+Version 1.9.0
+* Added possibility to disable Location Services check before scan (https://github.com/Polidea/RxAndroidBle/pull/533)
+* Reworked library logging API and behaviour (https://github.com/Polidea/RxAndroidBle/pull/551) 
+
+Version 1.8.2
+* Fixed sporadic NullPointerException in DisconnectionRouter (https://github.com/Polidea/RxAndroidBle/pull/553)
+
+Version 1.8.1
+* Added more GATT status descriptions (https://github.com/Polidea/RxAndroidBle/pull/543)
+
+Version 1.8.0
+* Added `NotificationSetupMode.QUICK_SETUP` for devices which start notifying right after CCC descriptor write (https://github.com/Polidea/RxAndroidBle/pull/478)
+* Migrated to androidx usage (https://github.com/Polidea/RxAndroidBle/pull/497) 
+
+Version 1.7.2
+* Fixed stalled library (race condition) when trying to connect while BluetoothAdapter is OFF (https://github.com/Polidea/RxAndroidBle/pull/522)
+* Fixed logs in DisconnectionRouter (https://github.com/Polidea/RxAndroidBle/pull/523) 
+
+Version 1.7.1
+* Fixed possible `IllegalArgumentException` while parsing UUIDs from advertisements (https://github.com/Polidea/RxAndroidBle/pull/485)
+* Fixed `NullPointerException` when calling `BackgroundScanner` start / stop scan while `BluetoothAdapter` was not turned ON (https://github.com/Polidea/RxAndroidBle/pull/487)
+
+Version 1.7.0
+* Introduced a new API that allows for background scanning in modern Android OS versions (https://github.com/Polidea/RxAndroidBle/issues/369)
+* Fixed LocationServicesOkObservable (https://github.com/Polidea/RxAndroidBle/pull/438)
+* Added GATT status code to `BleDisconnectionException` (https://github.com/Polidea/RxAndroidBle/pull/405)
+* Fixed possible concurrent access to `DisconnectionRouter` (https://github.com/Polidea/RxAndroidBle/pull/442)
+* Fixed race condition in `CharacteristicLongWriteOperation` (https://github.com/Polidea/RxAndroidBle/pull/465) 
+
+Version 1.6.0
+* Deprecated ConnectionSharingAdapter (https://github.com/Polidea/RxAndroidBle/pull/397)
+* Fixed unexpected behaviour of LocationServicesOkObservable if unsubscribed immediately after first emission (https://github.com/Polidea/RxAndroidBle/pull/430)
+* Added possibility to modify CustomOperation priority (https://github.com/Polidea/RxAndroidBle/pull/414)
+* Fixed stalled library if a just started operation was already unsubscribed (https://github.com/Polidea/RxAndroidBle/pull/428) 
+
+Version 1.5.0
+* Added possibility to change default operation timeout (https://github.com/Polidea/RxAndroidBle/pull/321)
+* Fixed Dagger2 compatibility (https://github.com/Polidea/RxAndroidBle/pull/342 https://github.com/Polidea/RxAndroidBle/pull/348)
+* Fixed DisconnectionRouter leaking subscription to RxBleAdapterStateObservable (https://github.com/Polidea/RxAndroidBle/pull/353)
+* Improved Location Services status check (https://github.com/Polidea/RxAndroidBle/issues/327)
+* Added logger that prints out GATT server structure on a successful discovery. The log is generated when the logger is in a VERBOSE level (https://github.com/Polidea/RxAndroidBle/pull/355)
+* Enhanced operation logger so it displays how long the operation performed. (https://github.com/Polidea/RxAndroidBle/pull/356)
+* Added retry strategies for long write operations (https://github.com/Polidea/RxAndroidBle/pull/357)
+* Introduced API in RxJava2
+* Removed deprecated establishConnection method
+* Removed deprecated writeCharacteristic method
+* Introduced BleDescriptorNotFoundException
+
+Version 1.5.0 (RxJava1)
+* Added possibility to change default operation timeout (https://github.com/Polidea/RxAndroidBle/pull/321)
+* Fixed Dagger2 compatibility (https://github.com/Polidea/RxAndroidBle/pull/342 https://github.com/Polidea/RxAndroidBle/pull/348)
+* Fixed DisconnectionRouter leaking subscription to RxBleAdapterStateObservable (https://github.com/Polidea/RxAndroidBle/pull/353)
+* Improved Location Services status check (https://github.com/Polidea/RxAndroidBle/issues/327)
+* Added logger that prints out GATT server structure on a successful discovery. The log is generated when the logger is in a VERBOSE level (https://github.com/Polidea/RxAndroidBle/pull/355)
+* Enhanced operation logger so it displays how long the operation performed. (https://github.com/Polidea/RxAndroidBle/pull/356)
+* Added retry strategies for long write operations (https://github.com/Polidea/RxAndroidBle/pull/357)
+
+Version 1.4.3 (RxJava1)
 * Log informing that the underlying semaphore in a QueueSemaphore has been interrupted will be printed only when the situation was unexpected.(https://github.com/Polidea/RxAndroidBle/issues/317)
 * Fixed possible race condition when calling `.doOnSubscribe()` and `.doOnUnsubscribe()` which lead to calling `ConnectionOperationQueueImpl.onConnectionUnsubscribed()` before the `.onConnectionSubscribed()` has returned. (https://github.com/Polidea/RxAndroidBle/issues/308)
 * Updated RxJava dependency (https://github.com/Polidea/RxAndroidBle/issues/312)
